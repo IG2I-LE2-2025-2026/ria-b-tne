@@ -52,21 +52,22 @@
 		$("#serveur select option:eq(" + numAPI+1 + ")").prop("selected","selected");
 		$("#pseudo").html("Pseudo : " + cache.pseudo).show();	
 		
-		// AJAX
-		// Asynchronous 
-		// JAvascript
-		// XMLHttpRequest
-		// Sequence d'appels : 
-		 chargerArticles(3361); 
-		 //A1) requete envoyée, la fonction se termine immédiatement AVANT d'avoir reçu la réponse 
-		  
-		// A2) déclencher l'événement change ! 
-		// ICI c'est TROP TOT ! on n'a pas encore recu la réponse
-		// le select n'est pas rempli !! 
-		// $("select","#articles").change();  
 		
-		// A3) plus tard, le serveur aura répondu
-		// on exécutera la fonction cb de traitement de la réponse 
+
+		chargerArticles(3361); 
+		// 1) req AJAX pour récupérer tous les articles 
+		// Son exécution est ASYNCHRONE !!!!! 
+		// La fonction se termine immédiatement 
+		// AVANT que le serveur ait répondu !!!
+		 
+		// 3) récupération de la réponse du serveur 
+		// pour les afficher 
+		// sélectionner le 3361
+		  
+		// $("select","#articles").change();
+		// 2) on déclenche change TROP TOT  
+		// "fait comme si on venait de changer"
+		// pour déclencher l'affichage de ses paragraphes  
 		
 	}
 	
@@ -122,6 +123,14 @@ $(document).keyup(function(contexte){
 				console.log("OK identification");
 				//var user = $("#identification input[type='text']").val(); 
 				//var password = $("#identification input[type='password']").val();
+				
+				// $(this) est le bouton OK
+				// $(this).parent() est le fieldset #identification
+				// $("input[type='text']", $(this).parent())
+				// le seul champ texte de ce fieldset 
+				// Possible aussi : 
+				// $("#identification input[type='text']")
+				
 				var user = $("input[type='text']", $(this).parent()).val();
 				var password = $("input[type='password']", $(this).parent()).val();
 				console.log("user: "+user+" pass:"+password);
@@ -129,9 +138,9 @@ $(document).keyup(function(contexte){
 				$.ajax({
 					type: "POST",
 					url: cache.apiRoot + "/authenticate",
-					//headers: {"debug-data":true},
+					//headers: {"hash":hash},
 					data: {"user":user,"password":password},
-					dataType: "json",
+					dataType: "json", // nature du résultat attendu
 					success: function(oRep){
 
 						console.log(oRep); 
@@ -152,6 +161,17 @@ $(document).keyup(function(contexte){
 		// reaction au changement dans le menu déroulant des api 
 		$("select","#serveur").change(function(){
 			// $(this) denote le select 
+			
+			//$(selecteur,contexte) : rechercher le selecteur 
+			// SOUS le contexte passé en paramètre
+			// contexte peut être : une référence jQuery
+			// un sélecteur CSS 
+			
+			// $("option:selected", $(this))
+			// $("option:selected", "#serveur")
+			// $("option:selected", "#serveur select")
+			// $("#serveur option:selected")
+			
 			cache.apiRoot = $("option:selected", $(this)).html(); 
 			console.log("API root : " + cache.apiRoot);	
 			$("#identification").show("slow");
@@ -179,13 +199,22 @@ $(document).keyup(function(contexte){
 	
 		// idA doit être sélectionné dans le menu déroulant
 		// (s'il est fourni) 
-
 		
 		// GET /articles 
+		// $.getJSON(url, dataQS , fnCB) 
+		
 		$.getJSON(cache.apiRoot + "/articles", 
 			{hash:cache.hash}, 
 			function(oRep){
 				console.log(oRep);
+				
+				/*
+				"version":1.3,
+				"success":true,
+				"status":200,
+				"apiname":"paragraphes",
+				"articles":[{"id":"3351","titre":"Nouveau"}, ...
+				*/
 				
 				// vide le menu déroulant des articles 
 				$("select", "#articles").empty(); 
@@ -258,6 +287,7 @@ $(document).keyup(function(contexte){
 			function(oRep){
 				console.log(oRep);
 				var i; 
+				$("#contenu").empty();
 				for(i=0;i<oRep.paragraphes.length;i++) {
 					var jPClone = jPEditable
 						.clone(true)
@@ -361,19 +391,41 @@ var jAjoutP =
 			$("<input type='button'>")
 				.val("+")
 				.click(function(){
-					// référence jQ. sur l'elt cible de l'evt => $(this) 
-					// var isFirst = $("input[value='+']").first().is($(this));
 					var isFirst = $("input[value='+']:first").is($(this));
 					var contenu = $(this).next().val(); 
-					var jCloneP = jPEditable.clone(true);
-					if (contenu != "") 
-						jCloneP.html(contenu); 
+					var jCloneP = jPEditable
+						.clone(true)
+						.addClass("desactive");
+						
+					if (contenu != "") jCloneP.html(contenu); 
+					// if (contenu == "") contenu = "nouveau";
+					
 					
 					if (isFirst) {
 						$("#contenu").prepend(jCloneP); 
 					} else {
 						$("#contenu").append(jCloneP); 
 					}
+
+					$.ajax({
+						type: "POST",
+						url: cache.apiRoot + "/articles/" 
+							+ $(this).parents("fieldset").data("id")
+							+ "/paragraphes",
+						headers: {"hash":cache.hash},
+						data: {"contenu":jCloneP.html()},
+						dataType: "json", // nature du résultat attendu
+						success: function(oRep){
+							console.log(oRep);
+							// on réinsère les méta du P. côté serveur
+							// oRep.paragraphe
+							// dans le P. côté client 
+							jCloneP
+								.data(oRep.paragraphe)
+								.html(oRep.paragraphe.contenu)
+								.removeClass("desactive");
+						}
+					}); // fin $.ajax 
 				
 				}) // fin fn click btn + 
 		) // fin append btn+
