@@ -5,6 +5,35 @@
 	#identification {display:none;}
 	.hidden {display:none;}
 	.red {color:red;}
+	
+	#contenu {
+		border:1px solid black;
+		padding:5px;
+	}
+
+	#contenu textarea{
+		display:block;
+		width:100%;
+		margin:3px 0;
+	}
+
+	#contenu .desactive{
+		font-style:italic;
+		color:lightgrey;
+	}
+
+	#contenu p:not(.desactive):hover{
+		cursor:pointer;
+		border:1px dashed black;
+	}
+
+	#contenu p.desactive:hover{
+		cursor:not-allowed;
+	}
+
+	.m5 {
+		margin:5px 0;
+	}
 </style>
 
 <script>
@@ -22,10 +51,55 @@
 		cache.hash = roots[numAPI].hash; 
 		$("#serveur select option:eq(" + numAPI+1 + ")").prop("selected","selected");
 		$("#pseudo").html("Pseudo : " + cache.pseudo).show();	
-		 chargerArticles();		 
+		
+		// AJAX
+		// Asynchronous 
+		// JAvascript
+		// XMLHttpRequest
+		// Sequence d'appels : 
+		 chargerArticles(3361); 
+		 //A1) requete envoyée, la fonction se termine immédiatement AVANT d'avoir reçu la réponse 
+		  
+		// A2) déclencher l'événement change ! 
+		// ICI c'est TROP TOT ! on n'a pas encore recu la réponse
+		// le select n'est pas rempli !! 
+		// $("select","#articles").change();  
+		
+		// A3) plus tard, le serveur aura répondu
+		// on exécutera la fonction cb de traitement de la réponse 
+		
 	}
 	
+// afficher les méta-données s'il y en a 
+$(document).on("mouseover","#contenu *", function(){
+	var meta = $(this).data(); 
+	if (! $.isEmptyObject(meta)) console.log(meta); 
+}); 
+
+
+// TODO : Lors de l'appui sur Escape 
+// dans le document 
+// parcourir les TA
+// les remplacer par des P. en reprenant leur contenu initial 
+$(document).keyup(function(contexte){
+	if (contexte.key=="Escape") {
+		$("#contenu textarea").each(function(){	
+			var jPClone = jPEditable
+				.clone(true)
+				.data($(this).data())
+				.html($(this).data("contenu")); 
+				
+			$(this).replaceWith(jPClone);
+		}); 
+	}
+}); // fin Esc. 
+
+	
 	$(document).ready(function(){
+	
+		// insérer btn + avant et après le contenu
+		$("#contenu").before(jAjoutP.clone(true));
+		$("#contenu").after(jAjoutP.clone(true));
 	
 		// reaction au changement dans le menu déroulant des articles
 		// IL DOIT EXISTER !! 
@@ -34,10 +108,12 @@
 			// quelle est l'option sélectionnée ? 
 			// $(this) c'est le select des articles 
 			// console.log($("option:selected",$(this)));
-			// quelles sont ses données ? 
+			// quelles sont ses données ?
+			console.log("change"); 
 			console.log($("option:selected",$(this)).data());
-			// var id = $("option:selected",$(this)).data("id"); 
-			// chargerArticle($("option:selected",$(this)).data()); 
+			var id = $("option:selected",$(this)).data("id");
+			console.log("id vaut " + id); 
+			chargerArticle($("option:selected",$(this)).data()); 
 		}); // fin change select articles
 				
 		
@@ -99,7 +175,11 @@
 		autologin();
 	}); // fin doc.ready
 	
-	function chargerArticles() {
+	function chargerArticles(idA) {
+	
+		// idA doit être sélectionné dans le menu déroulant
+		// (s'il est fourni) 
+
 		
 		// GET /articles 
 		$.getJSON(cache.apiRoot + "/articles", 
@@ -122,18 +202,28 @@
 				// remplir le select des articles 
 				var i; // locale !! 
 				for(i=0;i<oRep.articles.length;i++) {
-					$("select", "#articles").append(
-						$("<option>")
-							.html(oRep.articles[i].titre)
-							.data(oRep.articles[i])
-					); 
+				
+					// on crée l'option représentant cet article 
+					// c'est le moment de vérifier si c'est CELUI-LA qu'il faut sélectionner 
+					
+					var jOp = $("<option>")
+								.html(oRep.articles[i].titre)
+								.data(oRep.articles[i]); 
+								
+					if ((idA != undefined) && (idA == oRep.articles[i].id)) 
+						jOp.attr("selected","selected");
+						
+					$("select", "#articles").append(jOp); 
+						
 				}
 				
 				// afficher 
 				$("#articles").show();
 				
+				// déclencher l'événement change ! 
+				$("select","#articles").change(); 
 		
-		}); // fin get /articles 
+		}); // fin success get /articles 
 		
 		// remplir le menu déroulant dans #articles 
 		// Attention à bien écraser les données précédentes ! 
@@ -141,6 +231,156 @@
 		// afficher #articles 
 	
 	} 
+	
+	function chargerArticle(oArticle) {
+		console.log("chargerArticle");
+		// Affiche le fs "article"
+		$("#article").show(); 
+		// afficher le titre de cet article 
+		// dans la légende 
+		
+		// on stocke les méta-données de l'article 
+		// dans le fieldset article 
+		// EN PLUS du menu déroulant 
+		$("#article").data(oArticle);
+		
+		// retrouver le titre : 
+		// le passer en paramètre ! 
+		// regarder l'option sélectionnée dans #articles select 
+		// faire une requete GET /articles/<id>
+		$("legend","#article").html(oArticle.titre); 
+		
+		// Récupérer ses P. 
+		// GET /articles/<id>/paragraphes
+		
+		$.getJSON(cache.apiRoot + "/articles/" + oArticle.id + "/paragraphes", 
+			{hash:cache.hash}, 
+			function(oRep){
+				console.log(oRep);
+				var i; 
+				for(i=0;i<oRep.paragraphes.length;i++) {
+					var jPClone = jPEditable
+						.clone(true)
+						.data(oRep.paragraphes[i])
+						.html(oRep.paragraphes[i].contenu); 
+						
+					$("#contenu").append(jPClone);
+				}		
+			
+		}); 
+		
+		// Les afficher 
+		// Les manipuler 
+	}
+	
+	
+	
+var jPEditable = $("<p>")
+	.html("nouveau")
+	.click(function(){
+	
+		// interdire l'édition des P. désactives
+		if ($(this).hasClass("desactive"))
+			return;
+	
+		// récupérer contenu actuel du P. => .html()
+		var contenu=$(this).html(); 
+		// créer un TA avec le même contenu => composant !
+		var jTAClone = jTAValidable
+			.clone(true)
+			.val(contenu)
+			.data($(this).data()); 
+			 
+		// remplacer le P. par ce TA => .replaceWith()
+		$(this).replaceWith(jTAClone); 
+		jTAClone.select();
+
+	}); // fin jPEditable
+	
+var jTAValidable = $("<textarea>")
+	.keydown(function(contexte){
+		// SI (ENTREE vient d'être appuyée)
+		if (contexte.key == "Enter") {
+			// récupérer le contenu actuel du TA
+			var contenu = $(this).val();
+			var meta =  $(this).data();
+			// Créer un P éditable avec ce même contenu  
+			var jPClone = jPEditable
+				.clone(true)
+				.addClass("desactive")
+				.data(meta)
+				.html(contenu); 
+				
+	
+				
+			// var idArticle = $("#article").data("id"); 
+			// var idArticle = $(this).parent().parent().data("id"); 
+			var idArticle = $(this).parents("fieldset").data("id");
+
+				
+			// remplacer le TA par ce P
+			$(this).replaceWith(jPClone);
+			
+			// envoyer une requete de mise à jour 
+			// au serveur 
+			// PUT /articles/id/paragraphes/id
+			// + hash 
+			// + contenu 
+			
+			$.ajax({
+				type: "PUT",
+				url: cache.apiRoot 
+						+ "/articles/" + idArticle 
+						+ "/paragraphes/" + meta.id
+						+ "?contenu=" + contenu,		
+				headers: {"hash":cache.hash},
+				success: function(oRep){
+					// TODO : mettre à jour le P. 
+					// concerné par la requete AJAX PUT
+					// où est-il ??? 
+					// jPClone est justement enfermé dans le scope de la fonction !! 
+						jPClone.data("contenu",oRep.paragraphe.contenu);
+						jPClone.html(oRep.paragraphe.contenu);
+						jPClone.removeClass("desactive");
+				},
+				dataType: "json"
+			});
+			
+			// Lorsque le serveur aura validé 
+			// la mise à jour 
+			// on enlèvera la classe "desactive"
+			
+		}
+	}); // fin jTAValidable 
+
+
+var jAjoutP = 
+	$("<div>")
+		.addClass("m5")
+		.append( // btn + 
+			$("<input type='button'>")
+				.val("+")
+				.click(function(){
+					// référence jQ. sur l'elt cible de l'evt => $(this) 
+					// var isFirst = $("input[value='+']").first().is($(this));
+					var isFirst = $("input[value='+']:first").is($(this));
+					var contenu = $(this).next().val(); 
+					var jCloneP = jPEditable.clone(true);
+					if (contenu != "") 
+						jCloneP.html(contenu); 
+					
+					if (isFirst) {
+						$("#contenu").prepend(jCloneP); 
+					} else {
+						$("#contenu").append(jCloneP); 
+					}
+				
+				}) // fin fn click btn + 
+		) // fin append btn+
+		.append( // champ texte 
+			$("<input type='text'>")
+		); 
+		// fin composant ajoutP
 </script>
 
 <body>
@@ -166,8 +406,14 @@
 		<select>
 			<option selected disabled>Choisir l'article à éditer</option>
 		</select>
-		<div class="hidden red" id="article"></div>
+		<div class="hidden red"></div>
 	</fieldset>
+	
+	<fieldset class="hidden" id="article">
+		<legend>Article</legend>
+		<div id="contenu"></div>
+	</fieldset>
+	
 </body>
 
 	

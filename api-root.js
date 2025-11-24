@@ -1,6 +1,6 @@
 roots = [
 	{	root:"http://tomnab.fr/paragraphes-api/api/",
-		hash:"ccc3164a48658d4d1ac8b63ef5eb249f",
+		hash:"bb2a5dee1e95820f4ba55c075d3bcd15",
 		pseudo:"tom"}, 
 	{	root:"http://localhost/api-paragraphes/api/",
 		hash:"10bca641466d835d3db9be02ab6e1d08",
