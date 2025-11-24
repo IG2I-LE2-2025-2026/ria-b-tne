@@ -21,21 +21,25 @@
 		cache.pseudo = roots[numAPI].pseudo; 
 		cache.hash = roots[numAPI].hash; 
 		$("#serveur select option:eq(" + numAPI+1 + ")").prop("selected","selected");
-		$("#pseudo").html("Pseudo : " + cache.pseudo).show();			 
+		$("#pseudo").html("Pseudo : " + cache.pseudo).show();	
+		 chargerArticles();		 
 	}
 	
 	$(document).ready(function(){
 	
-				
-		// reaction au changement dans le menu déroulant des api 
+		// reaction au changement dans le menu déroulant des articles
+		// IL DOIT EXISTER !! 
+		// LE DOCUMENT DOIT ETRE CHARGE  
 		$("select","#articles").change(function(){
 			// quelle est l'option sélectionnée ? 
+			// $(this) c'est le select des articles 
 			// console.log($("option:selected",$(this)));
 			// quelles sont ses données ? 
+			console.log($("option:selected",$(this)).data());
 			// var id = $("option:selected",$(this)).data("id"); 
-			chargerArticle($("option:selected",$(this)).data()); 
+			// chargerArticle($("option:selected",$(this)).data()); 
 		}); // fin change select articles
-		
+				
 		
 		// click sur btn OK pour s'identifier
 		$("#identification input[value='OK']").click(function(){
@@ -92,9 +96,51 @@
 		
 
 		
-		//autologin();
+		autologin();
 	}); // fin doc.ready
 	
+	function chargerArticles() {
+		
+		// GET /articles 
+		$.getJSON(cache.apiRoot + "/articles", 
+			{hash:cache.hash}, 
+			function(oRep){
+				console.log(oRep);
+				
+				// vide le menu déroulant des articles 
+				$("select", "#articles").empty(); 
+				
+				// rajouter la première option 
+				// <option selected disabled>Choisir l'article à éditer</option>
+				$("select", "#articles").append(
+						$("<option>")
+							.html("Choisir l'article &agrave; &eacute;diter")
+							.attr("selected","selected")
+							.attr("disabled","disabled")						
+				); 
+								
+				// remplir le select des articles 
+				var i; // locale !! 
+				for(i=0;i<oRep.articles.length;i++) {
+					$("select", "#articles").append(
+						$("<option>")
+							.html(oRep.articles[i].titre)
+							.data(oRep.articles[i])
+					); 
+				}
+				
+				// afficher 
+				$("#articles").show();
+				
+		
+		}); // fin get /articles 
+		
+		// remplir le menu déroulant dans #articles 
+		// Attention à bien écraser les données précédentes ! 
+		// penser à le vide d'abord avant de le remplir 
+		// afficher #articles 
+	
+	} 
 </script>
 
 <body>
@@ -115,7 +161,13 @@
 		<div class="hidden red" id="msg"></div>
 	</fieldset>
 	
-
+	<fieldset class="hidden" id="articles">
+		<legend>Articles</legend>
+		<select>
+			<option selected disabled>Choisir l'article à éditer</option>
+		</select>
+		<div class="hidden red" id="article"></div>
+	</fieldset>
 </body>
 
 	
