@@ -17,7 +17,7 @@
 		margin:3px 0;
 	}
 
-	#contenu .desactive{
+	.desactive{
 		font-style:italic;
 		color:lightgrey;
 	}
@@ -51,7 +51,7 @@
 		cache.hash = roots[numAPI].hash; 
 		$("#serveur select option:eq(" + numAPI+1 + ")").prop("selected","selected");
 		$("#pseudo").html("Pseudo : " + cache.pseudo).show();	
-		
+		$("input[value='Logout']", "#serveur").show();
 		
 
 		chargerArticles(3361); 
@@ -98,9 +98,23 @@ $(document).keyup(function(contexte){
 	
 	$(document).ready(function(){
 	
+		// click logout
+		$("input[value='Logout']", "#serveur").click(function(){
+			cache.hash = ""; 
+			cache.pseudo = false;  
+			$("#identification").show();
+			$("#articles").hide("slow"); 
+			$("#article").hide("slow");
+			$("input[value='Logout']", "#serveur").hide(); 
+			$("#pseudo").html("").hide();
+		});
+	
 		// insérer btn + avant et après le contenu
 		$("#contenu").before(jAjoutP.clone(true));
 		$("#contenu").after(jAjoutP.clone(true));
+		
+		$("#articles select").after(jAddDelA); 
+		
 	
 		// reaction au changement dans le menu déroulant des articles
 		// IL DOIT EXISTER !! 
@@ -111,8 +125,10 @@ $(document).keyup(function(contexte){
 			// console.log($("option:selected",$(this)));
 			// quelles sont ses données ?
 			console.log("change"); 
-			console.log($("option:selected",$(this)).data());
-			var id = $("option:selected",$(this)).data("id");
+			
+			var meta = $("option:selected",$(this)).data();
+			if ($.isEmptyObject(meta)) return ; 
+			var id = meta.id; 
 			console.log("id vaut " + id); 
 			chargerArticle($("option:selected",$(this)).data()); 
 		}); // fin change select articles
@@ -147,7 +163,8 @@ $(document).keyup(function(contexte){
 						$("#msg").hide();
 						cache.hash = oRep.hash;
 						cache.pseudo = user; 
-						$("#pseudo").html("Pseudo : " + cache.pseudo).show();						
+						$("#pseudo").html("Pseudo : " + cache.pseudo).show();
+						$("input[value='Logout']", "#serveur").show();
 						$("#identification").hide(); 
 						chargerArticles();  
 					},
@@ -177,7 +194,9 @@ $(document).keyup(function(contexte){
 			$("#identification").show("slow");
 			$("#articles").hide(); 
 			cache.pseudo = false; 
-			$("#pseudo").html("").hide();	
+			$("#pseudo").html("").hide();
+			$("#articles").hide("slow");
+			$("#article").hide("slow");
 			
 		}); // fin change select root
 		
@@ -384,6 +403,87 @@ var jTAValidable = $("<textarea>")
 	}); // fin jTAValidable 
 
 
+var jAddDelA = 
+	$("<div>")
+		.addClass("m5")
+		.append( // btn + 
+			$("<input type='button'>")
+				.val("+")
+				.click(function(){
+					var contenu = $("#articles input[type='text']").val();
+					if (contenu=="") contenu = "Nouvel article"; 
+						
+					var jOp = $("<option>")
+								.html(contenu + " *")
+								.attr("disabled","disabled"); 
+	
+					// ajouter l'article au menu select 
+					$("select", "#articles").append(jOp);
+					
+					// cacher les paragraphes 
+					$("#article").hide(); 
+					// effacer le champ 
+					$(this).next().val("");
+					
+					
+					// créer l'article sur l'API
+					$.ajax({
+						type: "POST",
+						url: cache.apiRoot + "/articles",
+						headers: {"hash":cache.hash},
+						data: {"titre":contenu},
+						dataType: "json", // nature du résultat attendu
+						success: function(oRep){
+							console.log(oRep);
+							// réintégrer ses méta-données dans l'option 
+							// sélectionner cet article 
+							jOp
+								.data(oRep.article)
+								.html(oRep.article.titre)
+								.removeAttr("disabled")								
+								.prop("selected",true); 
+							$("#articles select").change(); 
+							// ce qui va charger ses paragraphes
+						}
+					}); // fin $.ajax 
+					 
+				
+					
+					
+				})
+		)
+		.append(
+			$("<input type='text'>")
+		)
+		.append( // btn + 
+			$("<input type='button'>")
+				.val("Supprimer")
+				.click(function(){
+				
+				if ($.isEmptyObject($("#articles option:selected").data())) return; 
+				// supprimer l'article sélectionné sur l'API
+				$.ajax({
+					type: "DELETE",
+					url: cache.apiRoot + "/articles/" 
+						+ $("#article").data("id"), 
+						// NB : on pourrait aller chercher l'info dans le select 
+					headers: {"hash":cache.hash},
+					dataType: "json", // nature du résultat attendu
+					success: function(oRep){
+						console.log(oRep);
+					}
+				}); // fin $.ajax 
+			
+				// supprimer l'option, sélectionner la première  
+				$("#articles option:selected").remove(); 	
+				$("#articles option:first").prop("selected",true);
+				
+				// cacher les P. 
+				$("#article").hide();
+				})
+		); 
+
+
 var jAjoutP = 
 	$("<div>")
 		.addClass("m5")
@@ -443,12 +543,13 @@ var jAjoutP =
 			<option selected disabled>Choisir la racine de l'API</option>
 		</select>
 		<div class="hidden" id="pseudo"></div>
+		<input class="hidden" type="button" value="Logout"/>
 	</fieldset>
 	
 	<fieldset class="hidden" id="identification">
 		<legend>Identification</legend>
-		Pseudo : <input type="text" value=""/> <br />
-		Password : <input type="password" value="" /> <br />
+		Pseudo : <input type="text" value="tom"/> <br />
+		Password : <input type="password" value="web" /> <br />
 		<input type="button" value="OK"/>
 		<div class="hidden red" id="msg"></div>
 	</fieldset>
