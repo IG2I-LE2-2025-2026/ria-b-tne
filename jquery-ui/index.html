@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="us">
+<head>
+	<meta charset="utf-8">
+	<link href="jquery-ui.min.css" rel="stylesheet">
+	<style>
+
+	
+	#contenu div {
+		position:relative; 
+	}
+	
+	.corbeille, .poignee {
+		position:absolute;
+	}
+	
+	.poignee {
+		top:5px;left:0px;
+	}
+	
+	.poignee:hover{
+		cursor:grabbing;
+	}
+	
+	.corbeille:hover{
+		cursor:pointer;
+	}
+	
+	.corbeille {
+		top:-2px;right:0;
+	}
+	
+	#contenu div p:hover {
+		cursor:pointer;
+	}
+
+	#contenu div p {
+		padding-left:20px;
+	}
+	
+	.allume {
+		background-color:yellow;
+		border:1px solid black;
+		height:5px;
+	}
+	</style>
+<script src="jquery-3.7.0.min.js"></script>
+<script src="jquery-ui.min.js"></script>
+
+
+<script>
+
+	// click sur corbeille : afficher le contenu du P ? 
+	$(document).on("click",".corbeille", function(){
+		// ref sur la corbeille cliquée : $(this)
+		console.log($(this).prev().prev().html());
+		console.log($("p",$(this).parent()).html());
+	
+	}); 
+
+	$(document).ready(	function() {
+		$( "#contenu" ).sortable({
+				handle:".poignee",
+				placeholder: "allume", 
+				stop: function(contexte,ui){
+					// objet ui contient item : une référence vers l'élément déplacé 
+					console.log("avant:" + ui.item.prev().html()); 
+					console.log("avant:" + $("p",ui.item.prev()).html()); 
+					// $(selecteur,contexte)				
+					console.log("apres:" + ui.item.next().text()); 
+				}
+			}
+		);
+		
+		
+	
+	}); // fin ready
+	
+	</script>
+</head>
+<body>
+
+<div id="contenu">
+	<div>
+		<p> P1 </p>
+		<span class="poignee ui-icon ui-icon-caret-2-n-s"></span>
+		<span class="corbeille ui-icon ui-icon-trash"></span>
+	</div>
+	<div>
+		<p> P2 </p>
+		<span class="poignee ui-icon ui-icon-caret-2-n-s"></span>
+		<span class="corbeille ui-icon ui-icon-trash"></span>
+	</div>
+	<div>
+		<p> P3 </p>
+		<span class="poignee ui-icon ui-icon-caret-2-n-s"></span>
+		<span class="corbeille ui-icon ui-icon-trash"></span>
+	</div>
+	<div>
+		<p> P4 </p>
+		<span class="poignee ui-icon ui-icon-caret-2-n-s"></span>
+		<span class="corbeille ui-icon ui-icon-trash"></span>
+	</div>
+</div>
+
+
+
+
+
+
+</body>
+</html>
