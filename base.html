@@ -1,7 +1,49 @@
 <script type="text/javascript" src="jquery-3.7.0.min.js"></script>
+<script src="jquery-ui.min.js"></script>
 <script type="text/javascript" src="api-root.js"></script>
 
+<link href="jquery-ui.min.css" rel="stylesheet">
 <style>
+	#contenu div {
+		position:relative; 
+	}
+	
+	.corbeille, .poignee {
+		position:absolute;
+	}
+	
+	.poignee {
+		top:5px;left:0px;
+	}
+	
+	.poignee:hover{
+		cursor:grabbing;
+	}
+	
+	.corbeille:hover{
+		cursor:pointer;
+	}
+	
+	.corbeille {
+		top:-2px;right:0;
+	}
+	
+	#contenu div p:hover {
+		cursor:pointer;
+	}
+
+	#contenu div p {
+		margin-left:20px;
+		margin-right:20px;
+		padding:0 4px;
+	}
+	
+	.allume {
+		background-color:yellow;
+		border:1px solid black;
+		height:5px;
+	}
+	
 	#identification {display:none;}
 	.hidden {display:none;}
 	.red {color:red;}
@@ -11,10 +53,20 @@
 		padding:5px;
 	}
 
+	#contenu div {
+		position:relative;
+		height:30px;
+		margin:5px 0;
+	}
+
 	#contenu textarea{
 		display:block;
-		width:100%;
-		margin:3px 0;
+		position:absolute;
+		left:0;right:0;
+		margin-left:20px;
+		margin-right:20px;
+		padding:0 4px;
+		
 	}
 
 	.desactive{
@@ -78,7 +130,7 @@ $(document).on("mouseover","#contenu *", function(){
 }); 
 
 
-// TODO : Lors de l'appui sur Escape 
+// Lors de l'appui sur Escape 
 // dans le document 
 // parcourir les TA
 // les remplacer par des P. en reprenant leur contenu initial 
@@ -95,8 +147,103 @@ $(document).keyup(function(contexte){
 	}
 }); // fin Esc. 
 
+
+	// click sur corbeille : afficher le contenu du P ? 
+	$(document).on("click",".corbeille", function(){
+		// les méta-données sont dans le p ou le textarea
+		// il faudrait les intégrer dans le div parent du groupe p/span/span 
+		// mais ça ferait bcp de travail 
+		var jDiv = $(this).parent(); 
+		var meta = $("p,textarea",jDiv).data();
+		console.log(meta);
+		
+		var idArticle = $(this).parents("fieldset").data("id");
+		
+		$.ajax({
+			type: "DELETE",
+			url: cache.apiRoot 
+					+ "/articles/" + idArticle 
+					+ "/paragraphes/" + meta.id,		
+			headers: {"hash":cache.hash},
+			success: function(oRep){
+				jDiv.remove();
+			},
+			dataType: "json"
+		});
+			 
+	}); 
 	
 	$(document).ready(function(){
+	
+		$( "#contenu" ).sortable({
+				handle:".poignee",
+				placeholder: "allume", 
+				stop: function(contexte,ui){
+					
+					// objet ui contient item : une référence vers l'élément déplacé 
+					// console.log("avant:" + ui.item.prev().html()); 
+					// console.log("avant:" + $("p",ui.item.prev()).html()); 
+					// $(selecteur,contexte)				
+					// console.log("apres:" + ui.item.next().text()); 
+					
+					var avant = ui.item.prev(); 
+					var apres = ui.item.next(); 
+					if (avant.length != 0) {
+						var meta = $("p,textarea",avant).data(); 
+						var ordre = parseInt(meta.ordre)+1; 
+					}
+					else {
+						var meta = $("p,textarea",apres).data();
+						var ordre = meta.ordre; 
+					}
+					
+					console.log(meta);
+					var idArticle = $(this).parents("fieldset").data("id");
+		
+					$.ajax({
+						type: "PUT",
+						url: cache.apiRoot 
+								+ "/articles/" + idArticle 
+								+ "/paragraphes/" + $("p,textarea",ui.item).data("id")
+								+ "?ordre=" + ordre,		
+						headers: {"hash":cache.hash},
+						success: function(oRep){
+							// TODO : mettre à jour les méta-données 
+							// ATTENTION ! tous les ordres des P. peuvent avoir changé !! 
+							// soit on met à jour à la main dans les données les ordres des P., comme ce qui est fait côté API
+							// soit on relit tous les P. depuis l'API et on propage les ordres 
+							// soit on recrée tous les P. en les relisant depuis l'API => pas très efficace... 
+							// On choisit la deuxième solution à titre pédagogique 
+							
+							$.getJSON(cache.apiRoot + "/articles/" + idArticle + "/paragraphes", 
+								{hash:cache.hash}, 
+								function(oRep){
+									console.log(oRep);
+									var i; 
+									
+									// Hypothèse : les P. sont dans le bon ordre côté client 
+									// On ne fait que propager leurs numéros d'ordre
+									for(i=0;i<oRep.paragraphes.length;i++) {
+										// pour chaque meta de P, il faut retrouver le P. côté client
+										var currentMetaP =  oRep.paragraphes[i]; 
+										$("#contenu > div > p,textarea").each (function(){
+											console.log("cur:" + $(this).html()); 
+											if ($(this).data("id") == currentMetaP.id) {
+												$(this).data("ordre", currentMetaP.ordre); 
+											}										
+										}); 
+									}		
+									
+								}); 
+								
+							},// fin success 
+							dataType: "json"
+						});
+			
+			
+				}
+			}
+		);
 	
 		// click logout
 		$("input[value='Logout']", "#serveur").click(function(){
@@ -307,13 +454,24 @@ $(document).keyup(function(contexte){
 				console.log(oRep);
 				var i; 
 				$("#contenu").empty();
+				
+				// ATTENTION : les paragraphes ne sont pas triés... 
+				// Il faut les trier AVANT de les afficher 
+				oRep.paragraphes.sort(function(a,b){return parseInt(a.ordre) - parseInt(b.ordre);});
 				for(i=0;i<oRep.paragraphes.length;i++) {
 					var jPClone = jPEditable
 						.clone(true)
 						.data(oRep.paragraphes[i])
 						.html(oRep.paragraphes[i].contenu); 
 						
-					$("#contenu").append(jPClone);
+				// Créer un composant "div span span"
+				// dans lequel on insérera le clone 
+				// A MODIFIER : suppression du P avec son parent 
+				// Ajouter : penser à insérer la même structure  
+				// Penser à rendre facilement accessible les méta-données 
+				var jCloneCP = jComposantP.clone(true);
+				jCloneCP.append(jPClone);
+					$("#contenu").append(jCloneCP);
 				}		
 			
 		}); 
@@ -322,7 +480,15 @@ $(document).keyup(function(contexte){
 		// Les manipuler 
 	}
 	
-	
+var jComposantP = $("<div>")
+	.append($("<span>")
+					.addClass("corbeille")
+					.addClass("ui-icon")
+					.addClass("ui-icon-trash"))
+	.append($("<span>")
+					.addClass("poignee")
+					.addClass("ui-icon")
+					.addClass("ui-icon-caret-2-n-s")); 
 	
 var jPEditable = $("<p>")
 	.html("nouveau")
@@ -491,7 +657,7 @@ var jAjoutP =
 			$("<input type='button'>")
 				.val("+")
 				.click(function(){
-					var isFirst = $("input[value='+']:first").is($(this));
+					var isFirst = $("#article input[value='+']:first").is($(this));
 					var contenu = $(this).next().val(); 
 					var jCloneP = jPEditable
 						.clone(true)
@@ -500,30 +666,62 @@ var jAjoutP =
 					if (contenu != "") jCloneP.html(contenu); 
 					// if (contenu == "") contenu = "nouveau";
 					
+					var jCloneCP = jComposantP.clone(true);
+					jCloneCP.append(jCloneP);
+					var ordre = 0; 
+					// ATTENTION : il faudrait que ce P. dispose du bon numéro d'ordre !! 
 					
 					if (isFirst) {
-						$("#contenu").prepend(jCloneP); 
+						
+						// ordre ? valeur du premier -1 , sinon 0
+						var premier = $("#contenu > *").first();
+						console.log($("p,textarea",premier).data()); 
+						if (premier.length !=0) ordre = $("p,textarea",premier).data("ordre")-1;  
+						$("#contenu").prepend(jCloneCP);  
 					} else {
-						$("#contenu").append(jCloneP); 
+						 
+						// ordre ? valeur du dernier +1, sinon 0
+						var dernier = $("#contenu > *").last();
+						if (dernier.length !=0) ordre = $("p,textarea",dernier).data("ordre")+1;
+						$("#contenu").append(jCloneCP);
 					}
 
+					var meta = $(this).parents("fieldset").data(); 
 					$.ajax({
 						type: "POST",
 						url: cache.apiRoot + "/articles/" 
-							+ $(this).parents("fieldset").data("id")
+							+ meta.id
 							+ "/paragraphes",
 						headers: {"hash":cache.hash},
-						data: {"contenu":jCloneP.html()},
+						data: {"contenu":jCloneP.html() },
 						dataType: "json", // nature du résultat attendu
 						success: function(oRep){
 							console.log(oRep);
-							// on réinsère les méta du P. côté serveur
-							// oRep.paragraphe
-							// dans le P. côté client 
-							jCloneP
-								.data(oRep.paragraphe)
-								.html(oRep.paragraphe.contenu)
-								.removeClass("desactive");
+							
+							
+							// Il faut mettre à jour le numéro d'ordre ! 
+							
+							$.ajax({
+								type: "PUT",
+								url: cache.apiRoot 
+										+ "/articles/" + meta.id 
+										+ "/paragraphes/" + oRep.paragraphe.id
+										+ "?ordre=" + ordre,		
+								headers: {"hash":cache.hash},
+								success: function(oRep){
+									// on réinsère les méta du P. côté serveur
+									// oRep.paragraphe
+									// dans le P. côté client 
+									
+									jCloneP
+										.data(oRep.paragraphe)
+										.html(oRep.paragraphe.contenu)
+										.removeClass("desactive");
+								},
+								dataType: "json"
+							});
+
+							
 						}
 					}); // fin $.ajax 
 				

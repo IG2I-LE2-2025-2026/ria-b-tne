@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="us">
+<head>
+	<meta charset="utf-8">
+	<link href="jquery-ui.min.css" rel="stylesheet">
+
+	<script src="jquery-3.7.0.min.js"></script>
+	<script src="jquery-ui.min.js"></script>
+	<script>
+	
+	// click sur ".delete" (CROIX) présentes ET FUTURES ?
+	$(document).on("click",".delete", function(){
+	
+		//console.log("click sur croix ! ");
+		// ref. vers la croix cliquée ?? => $(this)
+		// ref. vers le div contenant la croix cliquée ? => $(this).parent()
+		// ref. vers le P. du div contenant la croix ? 
+		// => $("p", $(this).parent())
+		// => OU $(this).next().next()
+		console.log($("p", $(this).parent()).html());
+		console.log($(this).next().next().html());
+		 
+	});  
+	
+	
+	
+	// $(foo)
+	// appelle la fonction foo quand le doc. est prêt 
+	$(document).ready(function(){
+		// $(".delete").click(function(){}); 
+		// ne manipule que les croix qui existent DEJA 
+		
+		$("#contenu" ).sortable({
+			handle: ".move",
+			placeholder:"allume", 
+			stop : function(contexte,ui){
+				// ui.item : The jQuery object representing the current dragged element.
+				console.log($("p",ui.item).html());
+				// $("sel",contexte)
+				// TODO : si l'elt est le premier 
+				console.log($("p",ui.item.prev()).html());
+			}
+		});
+	}); // fin doc. ready 
+	
+	 
+	</script>
+	<style>
+	.move {
+		position:absolute;
+		top:6px;
+	}
+	.delete {position:absolute;
+		right:0px;
+	}
+	#contenu p {
+		margin-left:15px;
+		margin-right:10px;
+	}
+	#contenu div {
+		position:relative;
+	}
+	.allume {
+		background-color:lightyellow;
+		border:1px solid black;
+		height:5px;
+	}
+	</style>
+</head>
+<body>
+
+<div id="contenu">
+
+<div>
+	<span class="delete ui-icon ui-icon-circle-close"></span>
+	<span class="move ui-icon ui-icon-triangle-2-n-s"></span>
+	<p>p1</p>
+</div>
+
+<div>
+	<span class="delete ui-icon ui-icon-circle-close"></span>
+	<span class="move ui-icon ui-icon-triangle-2-n-s"></span>
+	<p>p2</p>
+</div>
+
+<div>
+	<span class="delete ui-icon ui-icon-circle-close"></span>
+	<span class="move ui-icon ui-icon-triangle-2-n-s"></span>
+	<p>p3</p>
+</div>
+
+
+<div>
+	<span class="delete ui-icon ui-icon-circle-close"></span>
+	<span class="move ui-icon ui-icon-triangle-2-n-s"></span>
+	<p>p4</p>
+</div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

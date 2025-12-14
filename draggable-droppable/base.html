@@ -1,0 +1,88 @@
+<html>
+<head>
+	<link href="jquery-ui.min.css" rel="stylesheet">
+	
+	<style>
+	
+	#items p {
+	width:100px; height:100px;
+	border: 1px solid black;
+	display:inline-block;
+	margin: 3px;
+}
+
+	#cadres div {
+		float: left; 
+		width:300px; height:300px;
+		border: 1px solid black;
+		margin: 10px;
+	}
+	.allume {
+		background-color:yellow;
+	}
+	
+	.valide {
+		background-color:green !important;
+	}
+	.encadre {
+		border: 3px solid green !important;
+	}
+	</style>
+	<script src="external/jquery/jquery.js"></script>
+	<script src="jquery-ui.min.js"></script>
+	
+	<script>
+	
+	var jP = $("<p>")
+				.html("P")
+				.css({"background-color":"yellow"});
+	
+	 $( function() {
+		$("#items p" ).draggable({
+			//helper: "clone"
+			helper : function(){
+				// $(this) dénote l'élément "draggé"
+				return jP
+						.clone(true)
+						.html($(this).html());
+			}
+		}); // fonctonnalité glissement 
+		
+		$("#cadres div" ).droppable({	// caractéristiques de la zone de dépôt
+		  drop: function( event, ui ) {
+		    // $( this ) dénote l'élément "droppable"
+		      
+		  }, 
+		  over : function(event, ui){
+		  	$(this).addClass("allume");
+		  	ui.draggable.addClass("encadre");
+		  	ui.helper.addClass("valide");
+		  }, 
+		  out : function(event, ui){
+		  	$(this).removeClass("allume");
+		  	ui.draggable.removeClass("encadre");
+		  	ui.helper.removeClass("valide");
+		  }, 
+		});
+	  });
+	</script>
+</head>
+
+<body>
+
+<div id="items">
+	<p data-id="p1">P1</p>
+	<p data-id="p2">P2</p>
+	<p data-id="p3">P3</p>
+	<p data-id="p4">P4</p>
+</div>
+
+<div id="cadres">
+	<div data-id="d1">D1</div>
+	<div data-id="d2">D2</div>
+	<div data-id="d3">D3</div>
+	<div data-id="d4">D4</div>
+</div>
+
+</body>
+</html>
